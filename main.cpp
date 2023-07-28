@@ -11,9 +11,13 @@ int main()
     // Loading Sound files
     InitAudioDevice();
     Wave paddleHitWav = LoadWave("sounds/paddle_hit.wav");
+    Wave gameOverWav = LoadWave("sounds/game_over.wav");
+    Wave brickBreakWav = LoadWave("sounds/brick_break.wav");
     Sound paddleHit = LoadSoundFromWave(paddleHitWav);
+    Sound gameOver = LoadSoundFromWave(gameOverWav);
+    Sound brickBreak = LoadSoundFromWave(brickBreakWav);
+    bool gameOverSoundPlayed = false; // To avoid the sound loop
 
-    
     // --- TEXT BAR ---
     const int space{25};
     const int b_x{760};
@@ -64,6 +68,8 @@ int main()
     paddle.width = 100;
     paddle.height = 15;
     const int paddle_speed{10}; // dt 400
+    // I need this value in order to detect 5 areas on the top of the Paddle that is moving, so the value will need to update
+    int movingPaddle_x = paddle.x;
     
     // --- BALL ---
     // Ball coordinates
@@ -74,6 +80,10 @@ int main()
     ball.height = 15;
     int ball_direction_x{3}; // dt 230
     int ball_direction_y{4}; // dt 240
+    // The middle of the bottom of the ball will be handy for calculating the point of the collision between the Ball and the Paddle in order to bounce the Ball into different directions
+    Vector2 ball_bottomMiddle;
+    ball_bottomMiddle.x = ball.x + ball.width / 2;
+    ball_bottomMiddle.y = ball.y + ball.height;
 
     // --- BRICKS ---
     // Bricks dimensions
@@ -81,6 +91,7 @@ int main()
     brick.width = 60;
     brick.height = 18;
     const int brickSpacing{5}; 
+    int score = 0;
 
     // Bricks coordinates
     brick.x = topWall.height + 30;
@@ -131,13 +142,28 @@ int main()
         if (CheckCollisionRecs(ball, gameOverWall))
         {
             DrawText("Game Over!", 350, 240, 50, RED);
+
+            // If statement to avoid the game over sound being looped by the main While loop
+            if (!gameOverSoundPlayed)
+            {
+                // Play sound effect on Game Over
+                PlaySound(gameOver);
+                gameOverSoundPlayed = true;
+            }
         }
         else
         {
+            // Update variables for the collision between the Ball and the Paddle
+            ball_bottomMiddle.x = ball.x + ball.width / 2;
+            movingPaddle_x = paddle.x;
+
             // **** DRAW section ****
 
             // Draw the Text Bar
-            DrawText("Your Score: 0", 30, 25, 25, YELLOW);
+            // The score on the left
+            DrawText(TextFormat("Your Score: %i", score), 30, 25, 25, YELLOW);
+
+            // Game title on the right
             DrawText("B", b_x, title_y, titleFontSize, RED);
             DrawText("R", r_x, title_y, titleFontSize, ORANGE);
             DrawText("E", e_x, title_y, titleFontSize, GREEN);
@@ -201,7 +227,7 @@ int main()
                 PlaySound(paddleHit);
             }
 
-            // Check for collision with the Bricks along the x-axis
+            // Check for collision between the Ball and the Bricks along the x-axis
             for (int line = 0; line < numLines; line++) {
                 for (int col = 0; col < numCols; col++) {
                     if (helpingArray[line][col] && CheckCollisionRecs(ball, bricks[line][col]))
@@ -209,6 +235,12 @@ int main()
                         // Hit the left or right side => reverse horizontal direction
                         ball_direction_x = -ball_direction_x;
                         helpingArray[line][col] = false;
+
+                        // Play sound effect on hit
+                        PlaySound(brickBreak);
+
+                        // Update the Score
+                        score++;
                     }
                 }
             }
@@ -229,10 +261,50 @@ int main()
             // Check the Ball for collision with the Paddle
             if (CheckCollisionRecs(ball, paddle))
             {
-                int randNum = rand() % 3 + 1;
+               
+                /*
+                * Here I'm dividing the top surface of the Paddle into 5 separate parts. 
+                * The ball direction will be different, depending on which part od the Paddle 
+                * will contact with the bottom middle of the ball.
+                * This simple solution adds some simple player control mechanics, 
+                * so that they can try to direct the ball to the brick or bricks of their choice.
+                */
 
-                // Reverse vertical direction and change the angle a little bit
-                ball_direction_y = -randNum; 
+                if (ball_bottomMiddle.x >= movingPaddle_x && ball_bottomMiddle.x < movingPaddle_x + paddle.width / 5)
+                {
+                    // The Ball bounces and goes far to the left
+                    ball_direction_x = -4;
+                    ball_direction_y = -5;
+                }
+                else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 5 && ball_bottomMiddle.x < movingPaddle_x + paddle.width / 5 * 2)
+                {
+                    // The Ball bounces and goes slightly to the left
+                    ball_direction_x = -3;
+                    ball_direction_y = -5;
+                }
+                else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 5 * 2 && ball_bottomMiddle.x < movingPaddle_x + paddle.width / 5 * 3)
+                {
+                    // The Ball bounces and goes straight up
+                    ball_direction_x = 0;
+                    ball_direction_y = -5;
+                }
+                else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 5 * 3 && ball_bottomMiddle.x < movingPaddle_x + paddle.width / 5 * 4)
+                {
+                    // The Ball bounces and goes slightly to the right
+                    ball_direction_x = 3;
+                    ball_direction_y = -5;
+                }
+                else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 5 * 4 && ball_bottomMiddle.x < movingPaddle_x + paddle.width)
+                {
+                    // The Ball bounces and goes far to the right
+                    ball_direction_x = 4;
+                    ball_direction_y = -4;
+                }
+                // The else statement will run in any other case. So it can run if the ball hits the very far corner of the Paddle so that the bottom middle of the ball doesn't even collide with the Paddle
+                else
+                {
+                    ball_direction_y = -ball_direction_y;
+                }
 
                 // Play sound effect on hit
                 PlaySound(paddleHit);
@@ -247,6 +319,12 @@ int main()
                         // Hit the top or bottom, reverse vertical direction
                         ball_direction_y = -ball_direction_y;              
                         helpingArray[line][col] = false;
+
+                        // Play sound effect on hit
+                        PlaySound(brickBreak);
+
+                        // Update the Score
+                        score++;
                     }
                 }
             }
@@ -256,7 +334,11 @@ int main()
         EndDrawing();
     }
     UnloadSound(paddleHit);
+    UnloadSound(gameOver);
+    UnloadSound(brickBreak);
     UnloadWave(paddleHitWav);
+    UnloadWave(gameOverWav);
+    UnloadWave(brickBreakWav);
     CloseAudioDevice();
     CloseWindow();
 
