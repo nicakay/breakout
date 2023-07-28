@@ -172,17 +172,6 @@ int main()
                 }
             }
 
-            // Check each Brick for collision with the Ball
-            for (int line = 0; line < numLines; line++) {
-                for (int col = 0; col < numCols; col++) {
-                    if (CheckCollisionRecs(ball, bricks[line][col]))
-                    {
-                        ball_direction_y = -ball_direction_y;
-                        helpingArray[line][col] = false;
-                    }
-                }
-            }
-
             // Draw the Ball
             DrawRectangle(ball.x, ball.y, ball.width, ball.height, BLUE);
 
@@ -199,9 +188,43 @@ int main()
                 paddle.x -= paddle_speed;
             }
 
-            // Move the Ball
+            // Move the Ball along the x-axis
             ball.x += ball_direction_x;
+
+            // Check the Ball for collision with the Left or the Right Wall
+            if (CheckCollisionRecs(ball, leftWall) || CheckCollisionRecs(ball, rightWall))
+            {
+                // Reverse horizontal direction
+                ball_direction_x = -ball_direction_x; 
+
+                // Play sound effect on hit
+                PlaySound(paddleHit);
+            }
+
+            // Check for collision with the Bricks along the x-axis
+            for (int line = 0; line < numLines; line++) {
+                for (int col = 0; col < numCols; col++) {
+                    if (helpingArray[line][col] && CheckCollisionRecs(ball, bricks[line][col]))
+                    {
+                        // Hit the left or right side => reverse horizontal direction
+                        ball_direction_x = -ball_direction_x;
+                        helpingArray[line][col] = false;
+                    }
+                }
+            }
+
+            // Move the Ball along the y-axis
             ball.y += ball_direction_y;
+
+            // Check the Ball for collision with the Top Wall
+            if (CheckCollisionRecs(ball, topWall))
+            {
+                // Reverse vertical direction
+                ball_direction_y = -ball_direction_y; 
+
+                // Play sound effect on hit
+                PlaySound(paddleHit);
+            }
 
             // Check the Ball for collision with the Paddle
             if (CheckCollisionRecs(ball, paddle))
@@ -216,24 +239,16 @@ int main()
 
             }
 
-            // Check the Ball for collision with the Top Wall
-            if (CheckCollisionRecs(ball, topWall))
-            {
-                // Reverse vertical direction
-                ball_direction_y = -ball_direction_y; 
-
-                // Play sound effect on hit
-                PlaySound(paddleHit);
-            }
-
-            // Check the Ball for collision with the Left or the Right Wall
-            if (CheckCollisionRecs(ball, leftWall) || CheckCollisionRecs(ball, rightWall))
-            {
-                // Reverse horizontal direction
-                ball_direction_x = -ball_direction_x; 
-
-                // Play sound effect on hit
-                PlaySound(paddleHit);
+            // Check each Brick for collision with the Ball along the y-axis
+            for (int line = 0; line < numLines; line++) {
+                for (int col = 0; col < numCols; col++) {
+                    if (helpingArray[line][col] && CheckCollisionRecs(ball, bricks[line][col]))
+                    {
+                        // Hit the top or bottom, reverse vertical direction
+                        ball_direction_y = -ball_direction_y;              
+                        helpingArray[line][col] = false;
+                    }
+                }
             }
 
         }   
