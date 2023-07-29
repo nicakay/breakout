@@ -1,5 +1,4 @@
 #include "raylib.h"
-#include <stdlib.h>
 
 int main()
 {
@@ -33,57 +32,32 @@ int main()
 
     // --- WALLS ---
     // Top Wall coordinates
-    Rectangle topWall;
-    topWall.x = 0;
-    topWall.y = 65;
-    topWall.width = windowWidth;
-    topWall.height = 50;
+    Rectangle topWall{0, 65, windowWidth, 50};
 
     // Left Wall coordinates
-    Rectangle leftWall;
-    leftWall.x = topWall.x;
-    leftWall.y = topWall.y + topWall.height;
-    leftWall.width = 65;
-    leftWall.height = windowHeight - topWall.y - topWall.height;
+    Rectangle leftWall{topWall.x, topWall.y + topWall.height, 65, windowHeight - topWall.y - topWall.height};
 
     // Right Wall coordinates
-    Rectangle rightWall;
-    rightWall.x = windowWidth - leftWall.width;
-    rightWall.y = topWall.y + topWall.height;
-    rightWall.width = leftWall.width;
-    rightWall.height = windowHeight - topWall.y - topWall.height;
+    Rectangle rightWall{windowWidth - leftWall.width, topWall.y + topWall.height, leftWall.width, windowHeight - topWall.y - topWall.height};
 
     // Bottom (Game Over) Wall coordinates
-    Rectangle gameOverWall;
-    gameOverWall.x = 65;
-    gameOverWall.y = windowHeight - 5;
-    gameOverWall.width = windowWidth - leftWall.width - rightWall.width;
-    gameOverWall.height = 5;
+    Rectangle gameOverWall{65, windowHeight - 5, windowWidth - leftWall.width - rightWall.width, 5};
 
     // --- PADDLE ---
     // Paddle coordinates
-    Rectangle paddle;
-    paddle.x = topWall.height + 215;
-    paddle.y = 560;
-    paddle.width = 100;
-    paddle.height = 15;
+    Rectangle paddle{topWall.height + 215, 560, 100, 15};
     const int paddle_speed{10}; // dt 400
     // I need this value in order to detect 5 areas on the top of the Paddle that is moving, so the value will need to update
     int movingPaddle_x = paddle.x;
     
     // --- BALL ---
     // Ball coordinates
-    Rectangle ball;
-    ball.x  = 350;
-    ball.y = 320;
-    ball.width = 15;
-    ball.height = 15;
-    int ball_direction_x{3}; // dt 230
-    int ball_direction_y{4}; // dt 240
-    // The middle of the bottom of the ball will be handy for calculating the point of the collision between the Ball and the Paddle in order to bounce the Ball into different directions
+    Rectangle ball{350, 320, 15, 15};
+    int ball_direction_x{3};
+    int ball_direction_y{4};
+    // The following values - the middle of the bottom of the Ball, the bottom letf and the bottom right corner of the Ball will be helpful for calculating the points of the collision between the Ball and the Paddle in order to make the Ball correctly bounce into different directions
     Vector2 ball_bottomMiddle;
     ball_bottomMiddle.x = ball.x + ball.width / 2;
-    ball_bottomMiddle.y = ball.y + ball.height;
 
     // --- BRICKS ---
     // Bricks dimensions
@@ -201,15 +175,14 @@ int main()
             // Draw the Ball
             DrawRectangle(ball.x, ball.y, ball.width, ball.height, BLUE);
 
-
-            // *** Game Logic section ***
+            // *** GAME LOGIC section ***
 
             // Move the Paddle right if the Right Arrow key or the D key is pressed
-            if ((IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) && paddle.x < windowWidth - paddle.width - rightWall.width - 15)
+            if ((IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D) || IsGamepadButtonDown(0, GAMEPAD_BUTTON_RIGHT_TRIGGER_2)) && paddle.x < windowWidth - paddle.width - rightWall.width - 15)
             {
                 paddle.x += paddle_speed;
             }
-            else if ((IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A)) && paddle.x > leftWall.width + 15)
+            else if ((IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A) || IsGamepadButtonDown(0, GAMEPAD_BUTTON_LEFT_TRIGGER_2)) && paddle.x > leftWall.width + 15)
             {
                 paddle.x -= paddle_speed;
             }
@@ -270,7 +243,7 @@ int main()
                 * so that they can try to direct the ball to the brick or bricks of their choice.
                 */
 
-                if (ball_bottomMiddle.x >= movingPaddle_x && ball_bottomMiddle.x < movingPaddle_x + paddle.width / 5)
+                if (ball_bottomMiddle.x < movingPaddle_x + paddle.width / 5)
                 {
                     // The Ball bounces and goes far to the left
                     ball_direction_x = -4;
@@ -284,8 +257,8 @@ int main()
                 }
                 else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 5 * 2 && ball_bottomMiddle.x < movingPaddle_x + paddle.width / 5 * 3)
                 {
-                    // The Ball bounces and goes straight up
-                    ball_direction_x = 0;
+                    // The Ball bounces and goes straight up (actually it's tiny bit right to avoid a weird issue with the brick collision)
+                    ball_direction_x = static_cast<float>(0.5);
                     ball_direction_y = -5;
                 }
                 else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 5 * 3 && ball_bottomMiddle.x < movingPaddle_x + paddle.width / 5 * 4)
@@ -294,16 +267,16 @@ int main()
                     ball_direction_x = 3;
                     ball_direction_y = -5;
                 }
-                else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 5 * 4 && ball_bottomMiddle.x < movingPaddle_x + paddle.width)
+                else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 5 * 4)
                 {
                     // The Ball bounces and goes far to the right
                     ball_direction_x = 4;
                     ball_direction_y = -4;
                 }
-                // The else statement will run in any other case. So it can run if the ball hits the very far corner of the Paddle so that the bottom middle of the ball doesn't even collide with the Paddle
+                // The else statement in case any other kind of collision, so hopefully only when the ball hits collides with the left or the right side of the paddle
                 else
                 {
-                    ball_direction_y = -ball_direction_y;
+                    ball_direction_x = -ball_direction_x;
                 }
 
                 // Play sound effect on hit
