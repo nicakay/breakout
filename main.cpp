@@ -1,4 +1,5 @@
 #include "raylib.h"
+#include <cstdlib>
 
 int main()
 {
@@ -40,8 +41,8 @@ int main()
     // Right Wall coordinates
     Rectangle rightWall{windowWidth - leftWall.width, topWall.y + topWall.height, leftWall.width, windowHeight - topWall.y - topWall.height};
 
-    // Bottom (Game Over) Wall coordinates
-    Rectangle gameOverWall{65, windowHeight - 5, windowWidth - leftWall.width - rightWall.width, 5};
+    // Floor coordinates
+    Rectangle floor{65, windowHeight - 5, windowWidth - leftWall.width - rightWall.width, 5};
 
     // --- PADDLE ---
     // Paddle coordinates
@@ -95,6 +96,8 @@ int main()
     const int numCols{13};
     Rectangle bricks[numLines][numCols];
     bool helpingArray[numLines][numCols];
+    // The array where the bombs will be placed. The array illustrates the actual diagram of the bricks
+    bool hasABomb[numLines][numCols];
 
     for (int line = 0; line < numLines; line++) {
         for (int col = 0; col < numCols; col++) {
@@ -102,8 +105,33 @@ int main()
             int brickYPosition = brickYPositions[line];
             bricks[line][col] = { static_cast<float>(brickXPosition), static_cast<float>(brickYPosition),
                                   static_cast<float>(brick.width), static_cast<float>(brick.height) };
+
             helpingArray[line][col] = true;
+
+            // Initially the are no bombs, as they will be planted later, so -
+            hasABomb[line][col] = false;
         }
+    }
+
+    // --- BOMBS ---
+
+    // Build a Bomb
+    struct Bomb {
+        int x;
+        int y;
+        bool active;
+    };
+
+    // Create a Bomb object to store its X, Y and the active boolean
+    Bomb bomb;
+    
+    // I want to plant 1 bomb at a random brick of each row, so loop through the rows
+    for (int rowNum = 0; rowNum < 8; rowNum++)
+    {
+        // Pull a random number between 0 and 12 and assign the result to colNum
+        int colNum = rand() % 13;
+        // Plant a bomb at the colNum of the current row
+        hasABomb[rowNum][colNum] = true;
     }
 
     SetTargetFPS(60);
@@ -113,7 +141,7 @@ int main()
         BeginDrawing();
         ClearBackground(BLACK);
 
-        if (CheckCollisionRecs(ball, gameOverWall))
+        if (CheckCollisionRecs(ball, floor))
         {
             DrawText("Game Over!", 350, 240, 50, RED);
 
@@ -156,8 +184,8 @@ int main()
             // Draw the Right Wall
             DrawRectangle(rightWall.x, rightWall.y, rightWall.width, rightWall.height, GRAY);
 
-            // Draw the Bottom (Game Over) Wall
-            DrawRectangle(gameOverWall.x, gameOverWall.y, gameOverWall.width, gameOverWall.height, BLANK);
+            // Draw the Floor
+            DrawRectangle(floor.x, floor.y, floor.width, floor.height, BLANK);
             
             // Draw the Paddle
             DrawRectangle(paddle.x, paddle.y, paddle.width, paddle.height, BLUE);
@@ -208,6 +236,15 @@ int main()
                         // Hit the left or right side => reverse horizontal direction
                         ball_direction_x = -ball_direction_x;
                         helpingArray[line][col] = false;
+
+                        // If the Brick that was hit has a Bomb planted
+                        if (hasABomb[line][col])
+                        {
+                            // Position the Bomb at the center of the Brick that has been hit
+                            bomb.x = bricks[line][col].x + bricks[line][col].width / 2;
+                            bomb.y = bricks[line][col].y + bricks[line][col].height / 2;
+                            bomb.active = true;
+                        }
 
                         // Play sound effect on hit
                         PlaySound(brickBreak);
@@ -293,6 +330,14 @@ int main()
                         ball_direction_y = -ball_direction_y;              
                         helpingArray[line][col] = false;
 
+                        if (hasABomb[line][col])
+                        {
+                            // Position the Bomb at the center of the Brick that has been hit
+                            bomb.x = bricks[line][col].x + bricks[line][col].width / 2;
+                            bomb.y = bricks[line][col].y + bricks[line][col].height / 2;
+                            bomb.active = true;
+                        }
+
                         // Play sound effect on hit
                         PlaySound(brickBreak);
 
@@ -300,6 +345,12 @@ int main()
                         score++;
                     }
                 }
+            }
+
+            // Draw a Bomb if it's active
+            if (bomb.active)
+            {
+                DrawCircle(bomb.x, bomb.y, 6, RED); // Bomb
             }
 
         }   
