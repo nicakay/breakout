@@ -1,0 +1,1 @@
+![](https://github.com/nicakay/breakout/gifs/bomb_suicide.gif)

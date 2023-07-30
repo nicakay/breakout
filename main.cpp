@@ -144,6 +144,9 @@ int main()
     // Player dies if any of the Bombs hits the Paddle
     bool playerDied = false;
 
+    // Variable that checks if the player pressed Start
+    bool gameStart = false;
+
     SetTargetFPS(60);
     while(!WindowShouldClose())
     {
@@ -154,6 +157,7 @@ int main()
         if (CheckCollisionRecs(ball, floor))
         {
             DrawText("Game Over!", 350, 240, 50, RED);
+            DrawText(TextFormat("Your score: %i", score), 348, 320, 40, YELLOW);
 
             // If statement to avoid the game over sound being looped by the main While loop
             if (!gameOverSoundPlayed)
@@ -165,7 +169,8 @@ int main()
         }
         else if (playerDied)
         {
-            DrawText("You Died!", 350, 240, 50, RED);
+            DrawText("You Died!", 375, 240, 50, RED);
+            DrawText(TextFormat("Your score: %i", score), 348, 320, 40, YELLOW);
 
             // If statement to avoid the game over sound being looped by the main While loop
             if (!gameOverSoundPlayed)
@@ -173,6 +178,15 @@ int main()
                 // Play sound effect on Game Over
                 PlaySound(gameOver);
                 gameOverSoundPlayed = true;
+            }
+        }
+        else if (!gameStart)
+        {
+            DrawText("Press SPACE or A/X to begin", 150, 240, 50, YELLOW);
+        
+            if (IsKeyPressed(KEY_SPACE) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN))
+            {
+                gameStart = true;
             }
         }
         else
