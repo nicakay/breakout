@@ -47,7 +47,7 @@ int main()
     // --- PADDLE ---
     // Paddle coordinates
     Rectangle paddle{topWall.height + 215, 560, 100, 15};
-    const int paddle_speed{10}; // dt 400
+    const int paddle_speed{9};
     // I need this value in order to detect 5 areas on the top of the Paddle that is moving, so the value will need to update
     int movingPaddle_x = paddle.x;
     
@@ -95,36 +95,43 @@ int main()
     const int numLines{8};
     const int numCols{13};
     Rectangle bricks[numLines][numCols];
-    bool helpingArray[numLines][numCols];
-    // The array where the bombs will be placed. The array illustrates the actual diagram of the bricks
+    // An array of booleans that will help me to determine whether a particular Brick has or hasn't been hit by the Ball. The Brciks hit by the Ball will be hidden (not drawn at all)
+    bool isBrickActive[numLines][numCols];
+    // The array of booleans where the Bombs will be placed. The array illustrates the actual diagram of the Bricks
     bool hasABomb[numLines][numCols];
 
-    for (int line = 0; line < numLines; line++) {
-        for (int col = 0; col < numCols; col++) {
+    for (int line = 0; line < numLines; line++) 
+    {
+        for (int col = 0; col < numCols; col++) 
+        {
             int brickXPosition = brick.x + col * (brick.width + brickSpacing);
             int brickYPosition = brickYPositions[line];
             bricks[line][col] = { static_cast<float>(brickXPosition), static_cast<float>(brickYPosition),
                                   static_cast<float>(brick.width), static_cast<float>(brick.height) };
 
-            helpingArray[line][col] = true;
+            // At the beginning, all the Bricks are visible, as none of them has been hit yet
+            isBrickActive[line][col] = true;
 
-            // Initially the are no bombs, as they will be planted later, so -
+            // Initially the are no bombs, as they will be planted later in the code, so -
             hasABomb[line][col] = false;
         }
     }
 
     // --- BOMBS ---
+    // Initially, there will be 8 bombs, one for each row/line
+    const int maxBombs = 8;
 
     // Build a Bomb
-    struct Bomb {
+    struct Bomb 
+    {
         int x;
         int y;
         bool active;
     };
 
-    // Create a Bomb object to store its X, Y and the active boolean
-    Bomb bomb;
-    
+    // Create an array of Bomb structs to store their X, Y and the active boolean
+    Bomb bombs[maxBombs];
+
     // I want to plant 1 bomb at a random brick of each row, so loop through the rows
     for (int rowNum = 0; rowNum < 8; rowNum++)
     {
@@ -133,6 +140,9 @@ int main()
         // Plant a bomb at the colNum of the current row
         hasABomb[rowNum][colNum] = true;
     }
+
+    // Player dies if any of the Bombs hits the Paddle
+    bool playerDied = false;
 
     SetTargetFPS(60);
     while(!WindowShouldClose())
@@ -144,6 +154,18 @@ int main()
         if (CheckCollisionRecs(ball, floor))
         {
             DrawText("Game Over!", 350, 240, 50, RED);
+
+            // If statement to avoid the game over sound being looped by the main While loop
+            if (!gameOverSoundPlayed)
+            {
+                // Play sound effect on Game Over
+                PlaySound(gameOver);
+                gameOverSoundPlayed = true;
+            }
+        }
+        else if (playerDied)
+        {
+            DrawText("You Died!", 350, 240, 50, RED);
 
             // If statement to avoid the game over sound being looped by the main While loop
             if (!gameOverSoundPlayed)
@@ -191,10 +213,14 @@ int main()
             DrawRectangle(paddle.x, paddle.y, paddle.width, paddle.height, BLUE);
 
             // Draw all the bricks (8 lines / 13 bricks each) with a nested loop.
-            for (int line = 0; line < numLines; line++) {
-                for (int col = 0; col < numCols; col++) {
-                    if (helpingArray[line][col])
+            for (int line = 0; line < numLines; line++) 
+            {
+                for (int col = 0; col < numCols; col++) 
+                {
+                    // Check if the Brick in this particulat position hasn't been hit by the ball
+                    if (isBrickActive[line][col])
                     {
+                        // If the Brick is active, then draw the Brick
                         DrawRectangleRec(bricks[line][col], brickColors[line]);
                     }   
                 }
@@ -229,21 +255,46 @@ int main()
             }
 
             // Check for collision between the Ball and the Bricks along the x-axis
-            for (int line = 0; line < numLines; line++) {
-                for (int col = 0; col < numCols; col++) {
-                    if (helpingArray[line][col] && CheckCollisionRecs(ball, bricks[line][col]))
+            for (int line = 0; line < numLines; line++) 
+            {
+                for (int col = 0; col < numCols; col++) 
+                {
+                    // If there's a collision between the Ball and a Brick that is still active
+                    if (isBrickActive[line][col] && CheckCollisionRecs(ball, bricks[line][col]))
                     {
                         // Hit the left or right side => reverse horizontal direction
                         ball_direction_x = -ball_direction_x;
-                        helpingArray[line][col] = false;
+
+                        // Deactivate the Brick after the hit
+                        isBrickActive[line][col] = false;
 
                         // If the Brick that was hit has a Bomb planted
                         if (hasABomb[line][col])
                         {
-                            // Position the Bomb at the center of the Brick that has been hit
-                            bomb.x = bricks[line][col].x + bricks[line][col].width / 2;
-                            bomb.y = bricks[line][col].y + bricks[line][col].height / 2;
-                            bomb.active = true;
+                            // Create a temporary variable bombIndex
+                            int bombIndex = -1;
+                            // Repeat maxBombs times
+                            for (int i = 0; i < maxBombs; i++) 
+                            {
+                                // If the Bomb is not activated yet
+                                if (!bombs[i].active) 
+                                {
+                                    // Update bombIndex
+                                    bombIndex = i;
+                                    // Break the loop
+                                    break;
+                                }
+                            }
+
+                            // If bombIndex was updated (the bomb in not active yet)
+                            if (bombIndex != -1) 
+                            {
+                                // Position the Bomb at the center of the Brick that has been hit
+                                bombs[bombIndex].x = bricks[line][col].x + bricks[line][col].width / 2;
+                                bombs[bombIndex].y = bricks[line][col].y + bricks[line][col].height / 2;
+                                // Activate the bomb
+                                bombs[bombIndex].active = true;
+                            }
                         }
 
                         // Play sound effect on hit
@@ -322,20 +373,45 @@ int main()
             }
 
             // Check each Brick for collision with the Ball along the y-axis
-            for (int line = 0; line < numLines; line++) {
-                for (int col = 0; col < numCols; col++) {
-                    if (helpingArray[line][col] && CheckCollisionRecs(ball, bricks[line][col]))
+            for (int line = 0; line < numLines; line++) 
+            {
+                for (int col = 0; col < numCols; col++) 
+                {
+                    // If there's a collision between the Ball and a Brick that is still active
+                    if (isBrickActive[line][col] && CheckCollisionRecs(ball, bricks[line][col]))
                     {
                         // Hit the top or bottom, reverse vertical direction
-                        ball_direction_y = -ball_direction_y;              
-                        helpingArray[line][col] = false;
+                        ball_direction_y = -ball_direction_y;
+
+                        // Deactivate the Brick after the hit
+                        isBrickActive[line][col] = false;
 
                         if (hasABomb[line][col])
                         {
-                            // Position the Bomb at the center of the Brick that has been hit
-                            bomb.x = bricks[line][col].x + bricks[line][col].width / 2;
-                            bomb.y = bricks[line][col].y + bricks[line][col].height / 2;
-                            bomb.active = true;
+                            // Create a temporary variable bombIndex
+                            int bombIndex = -1;
+                            // Repeat maxBombs times
+                            for (int i = 0; i < maxBombs; i++) 
+                            {
+                                // If the Bomb is not active
+                                if (!bombs[i].active) 
+                                {
+                                    // Update bombIndex
+                                    bombIndex = i;
+                                    // Break the loop
+                                    break;
+                                }
+                            }
+
+                            // If bombIndex was updated (the bomb in not active yet)
+                            if (bombIndex != -1) 
+                            {
+                                // Position the Bomb at the center of the Brick that has been hit
+                                bombs[bombIndex].x = bricks[line][col].x + bricks[line][col].width / 2;
+                                bombs[bombIndex].y = bricks[line][col].y + bricks[line][col].height / 2;
+                                // Activate the bomb
+                                bombs[bombIndex].active = true;
+                            }
                         }
 
                         // Play sound effect on hit
@@ -348,9 +424,31 @@ int main()
             }
 
             // Draw a Bomb if it's active
-            if (bomb.active)
+            for (int i = 0; i < maxBombs; i++) 
             {
-                DrawCircle(bomb.x, bomb.y, 6, RED); // Bomb
+                // If the Bomb is activated
+                if (bombs[i].active) 
+                {
+                    // Draw the Bomb
+                    DrawCircle(bombs[i].x, bombs[i].y, 6, RED);
+
+                    // Drop the Bomb
+                    bombs[i].y++;
+
+                    // If the Bomb hits the Floor
+                    if(bombs[i].active && CheckCollisionCircleRec({static_cast<float>(bombs[i].x), static_cast<float>(bombs[i].y)}, 6, floor))
+                    {
+                        // Deactivate the Bomb
+                        bombs[i].active = false;
+                    }
+
+                    // If the Bomb hits the Paddle
+                    if(bombs[i].active && CheckCollisionCircleRec({static_cast<float>(bombs[i].x), static_cast<float>(bombs[i].y)}, 6, paddle))
+                    {
+                        // Kill the Player
+                        playerDied = true;
+                    }
+                }
             }
 
         }   
