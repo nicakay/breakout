@@ -1,1 +1,1 @@
-![](https://github.com/nicakay/breakout/gifs/bomb_suicide.gif)
+![](https://github.com/nicakay/breakout/blob/main/gifs/bomb_suicide.gif)
