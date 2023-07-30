@@ -99,7 +99,13 @@ int main()
     bool isBrickActive[numLines][numCols];
     // The array of booleans where the Bombs will be placed. The array illustrates the actual diagram of the Bricks
     bool hasABomb[numLines][numCols];
-
+    // An array of ghost bricks, they show up for a moment after breaking normal bricks
+    bool ghostBrick[numLines][numCols];
+    // The Ghost Brick timer array will keep track of the remaining time for each ghost brick, as they need to disappear after a short time
+    int ghostBrickTimer[numLines][numCols];
+    // Determines how long each Ghost Brick will be displayed (in frames)
+    int ghostBrickTime{4};
+    
     for (int line = 0; line < numLines; line++) 
     {
         for (int col = 0; col < numCols; col++) 
@@ -114,6 +120,9 @@ int main()
 
             // Initially the are no bombs, as they will be planted later in the code, so -
             hasABomb[line][col] = false;
+
+            // Hide all the Ghost Bricks
+            ghostBrick[line][col] = false;
         }
     }
 
@@ -128,6 +137,8 @@ int main()
         int y;
         bool active;
     };
+
+    const int bombRadius{8};
 
     // Create an array of Bomb structs to store their X, Y and the active boolean
     Bomb bombs[maxBombs];
@@ -236,7 +247,23 @@ int main()
                     {
                         // If the Brick is active, then draw the Brick
                         DrawRectangleRec(bricks[line][col], brickColors[line]);
-                    }   
+                    } 
+
+                    if (ghostBrick[line][col])
+                    {
+                        // If the ghost brick is active, then draw and show the Ghost Brick for a short time
+                        DrawRectangleRec(bricks[line][col], GRAY);
+
+                        // Decrement the Ghost Brick timer
+                        ghostBrickTimer[line][col]--;
+
+                        // If the timer gets to zero
+                        if (ghostBrickTimer[line][col] <= 0)
+                        {
+                            // Deactivate the Ghost Brick
+                            ghostBrick[line][col] = false;
+                        }
+                    }  
                 }
             }
 
@@ -281,6 +308,12 @@ int main()
 
                         // Deactivate the Brick after the hit
                         isBrickActive[line][col] = false;
+
+                        // Activate the Ghost Brick
+                        ghostBrick[line][col] = true;
+
+                        // Set the timer for the Ghost Brick to the Ghost Brick time (in frames)
+                        ghostBrickTimer[line][col] = ghostBrickTime;
 
                         // If the Brick that was hit has a Bomb planted
                         if (hasABomb[line][col])
@@ -406,6 +439,12 @@ int main()
                         // Deactivate the Brick after the hit
                         isBrickActive[line][col] = false;
 
+                        // Activate the Ghost Brick
+                        ghostBrick[line][col] = true;
+
+                        // Set the timer for the Ghost Brick to the Ghost Brick time (in frames)
+                        ghostBrickTimer[line][col] = ghostBrickTime;
+
                         if (hasABomb[line][col])
                         {
                             // Create a temporary variable bombIndex
@@ -450,20 +489,20 @@ int main()
                 if (bombs[i].active) 
                 {
                     // Draw the Bomb
-                    DrawCircle(bombs[i].x, bombs[i].y, 6, RED);
+                    DrawCircle(bombs[i].x, bombs[i].y, bombRadius, RED);
 
                     // Drop the Bomb
                     bombs[i].y++;
 
                     // If the Bomb hits the Floor
-                    if(bombs[i].active && CheckCollisionCircleRec({static_cast<float>(bombs[i].x), static_cast<float>(bombs[i].y)}, 6, floor))
+                    if(bombs[i].active && CheckCollisionCircleRec({static_cast<float>(bombs[i].x), static_cast<float>(bombs[i].y)}, bombRadius, floor))
                     {
                         // Deactivate the Bomb
                         bombs[i].active = false;
                     }
 
                     // If the Bomb hits the Paddle
-                    if(bombs[i].active && CheckCollisionCircleRec({static_cast<float>(bombs[i].x), static_cast<float>(bombs[i].y)}, 6, paddle))
+                    if(bombs[i].active && CheckCollisionCircleRec({static_cast<float>(bombs[i].x), static_cast<float>(bombs[i].y)}, bombRadius, paddle))
                     {
                         // Kill the Player
                         playerDied = true;
