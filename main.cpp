@@ -46,7 +46,7 @@ int main()
 
     // --- PADDLE ---
     // Paddle coordinates
-    Rectangle paddle{topWall.height + 215, 560, 100, 15};
+    Rectangle paddle{topWall.height + 215, 560, 102, 15};
     const int paddle_speed{9};
     // I need this value in order to detect 5 areas on the top of the Paddle that is moving, so the value will need to update
     int movingPaddle_x = paddle.x;
@@ -324,42 +324,48 @@ int main()
             {
                
                 /*
-                * Here I'm dividing the top surface of the Paddle into 5 separate parts. 
+                * Here I'm dividing the top surface of the Paddle into 6 separate parts. 
                 * The ball direction will be different, depending on which part od the Paddle 
                 * will contact with the bottom middle of the ball.
                 * This simple solution adds some simple player control mechanics, 
                 * so that they can try to direct the ball to the brick or bricks of their choice.
                 */
 
-                if (ball_bottomMiddle.x < movingPaddle_x + paddle.width / 5)
+                if (ball_bottomMiddle.x < movingPaddle_x + paddle.width / 6)
                 {
                     // The Ball bounces and goes far to the left
                     ball_direction_x = -4;
                     ball_direction_y = -5;
                 }
-                else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 5 && ball_bottomMiddle.x < movingPaddle_x + paddle.width / 5 * 2)
+                else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 6 && ball_bottomMiddle.x < movingPaddle_x + paddle.width / 6 * 2)
                 {
                     // The Ball bounces and goes slightly to the left
                     ball_direction_x = -3;
                     ball_direction_y = -5;
                 }
-                else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 5 * 2 && ball_bottomMiddle.x < movingPaddle_x + paddle.width / 5 * 3)
+                else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 6 * 2 && ball_bottomMiddle.x < movingPaddle_x + paddle.width / 6 * 3)
                 {
                     // The Ball bounces and goes straight up (actually it's tiny bit right to avoid a weird issue with the brick collision)
-                    ball_direction_x = static_cast<float>(0.5);
+                    ball_direction_x = -1;
                     ball_direction_y = -5;
                 }
-                else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 5 * 3 && ball_bottomMiddle.x < movingPaddle_x + paddle.width / 5 * 4)
+                else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 6 * 3 && ball_bottomMiddle.x < movingPaddle_x + paddle.width / 6 * 4)
                 {
                     // The Ball bounces and goes slightly to the right
+                    ball_direction_x = 1;
+                    ball_direction_y = -5;
+                }
+                else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 6 * 4 && ball_bottomMiddle.x < movingPaddle_x + paddle.width / 6 * 5)
+                {
+                    // The Ball bounces and goes far to the right
                     ball_direction_x = 3;
                     ball_direction_y = -5;
                 }
-                else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 5 * 4)
+                else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 6 * 5)
                 {
                     // The Ball bounces and goes far to the right
                     ball_direction_x = 4;
-                    ball_direction_y = -4;
+                    ball_direction_y = -5;
                 }
                 // The else statement in case any other kind of collision, so hopefully only when the ball hits collides with the left or the right side of the paddle
                 else
