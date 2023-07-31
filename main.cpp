@@ -1,6 +1,46 @@
 #include "raylib.h"
 #include <cstdlib>
 
+// Function that Restarts the game if the player wants to start over on the Game Over or Death screen
+void RestartGame(Rectangle &topWall, Rectangle &ball, int &ball_direction_x, int &ball_direction_y,
+               Rectangle &paddle, int &score, bool &gameStart, bool &playerDied, bool &gameOverSoundPlayed,
+               bool (&isBrickActive)[8][13], bool (&hasABomb)[8][13], bool (&ghostBrick)[8][13], int (&ghostBrickTimer)[8][13])
+{
+    // Reset the game variables and states
+    score = 0;
+    gameStart = false;
+    playerDied = false;
+    gameOverSoundPlayed = false;
+
+    // Reset Ball position and direction
+    ball.x = 350;
+    ball.y = 320;
+    ball_direction_x = 3;
+    ball_direction_y = 4;
+
+    // Reset Paddle position
+    paddle.x = topWall.height + 215;
+
+    // Reset Bricks
+    for (int line = 0; line < 8; line++) 
+    {
+        for (int col = 0; col < 13; col++) 
+        {
+            isBrickActive[line][col] = true;
+            hasABomb[line][col] = false; // Clear all the Bombs
+            ghostBrick[line][col] = false;
+            ghostBrickTimer[line][col] = 0;
+        }
+    }
+
+    // Replant new set of Bombs
+    for (int rowNum = 0; rowNum < 8; rowNum++) 
+    {
+        int colNum = rand() % 13;
+        hasABomb[rowNum][colNum] = true;
+    }
+}
+
 int main()
 {
     // Window dimensions
@@ -19,15 +59,15 @@ int main()
     bool gameOverSoundPlayed = false; // To avoid the sound loop
 
     // --- TEXT BAR ---
-    const int space{25};
+    const int lettersSpacing{25};
     const int b_x{760};
-    const int r_x{b_x + space};
-    const int e_x{r_x + space};
-    const int a_x{e_x + space};
-    const int k_x{a_x + space};
-    const int o_x{k_x + space};
-    const int u_x{o_x + space};
-    const int t_x{u_x + space};
+    const int r_x{b_x + lettersSpacing};
+    const int e_x{r_x + lettersSpacing};
+    const int a_x{e_x + lettersSpacing};
+    const int k_x{a_x + lettersSpacing};
+    const int o_x{k_x + lettersSpacing};
+    const int u_x{o_x + lettersSpacing};
+    const int t_x{u_x + lettersSpacing};
     const int title_y{20};
     const int titleFontSize{30};
 
@@ -104,7 +144,7 @@ int main()
     // The Ghost Brick timer array will keep track of the remaining time for each ghost brick, as they need to disappear after a short time
     int ghostBrickTimer[numLines][numCols];
     // Determines how long each Ghost Brick will be displayed (in frames)
-    int ghostBrickTime{4};
+    int ghostBrickTime{3};
     
     for (int line = 0; line < numLines; line++) 
     {
@@ -169,26 +209,38 @@ int main()
         {
             DrawText("Game Over!", 350, 240, 50, RED);
             DrawText(TextFormat("Your score: %i", score), 348, 320, 40, YELLOW);
+            DrawText("(Press Space, X or A to Try Again)", 250, 420, 28, BLUE);
 
-            // If statement to avoid the game over sound being looped by the main While loop
+            // If statement to avoid the game-over sound being looped by the main While loop
             if (!gameOverSoundPlayed)
             {
                 // Play sound effect on Game Over
                 PlaySound(gameOver);
                 gameOverSoundPlayed = true;
             }
+
+            if (IsKeyPressed(KEY_SPACE) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN))
+            {
+                RestartGame(topWall, ball, ball_direction_x, ball_direction_y, paddle, score, gameStart, playerDied, gameOverSoundPlayed, isBrickActive, hasABomb, ghostBrick, ghostBrickTimer);
+            }
         }
         else if (playerDied)
         {
             DrawText("You Died!", 375, 240, 50, RED);
             DrawText(TextFormat("Your score: %i", score), 348, 320, 40, YELLOW);
+            DrawText("(Press Space, X or A to Try Again)", 250, 420, 28, BLUE);
 
-            // If statement to avoid the game over sound being looped by the main While loop
+            // If statement to avoid the game-over sound being looped by the main While loop
             if (!gameOverSoundPlayed)
             {
                 // Play sound effect on Game Over
                 PlaySound(gameOver);
                 gameOverSoundPlayed = true;
+            }
+
+            if (IsKeyPressed(KEY_SPACE) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN))
+            {
+                RestartGame(topWall, ball, ball_direction_x, ball_direction_y, paddle, score, gameStart, playerDied, gameOverSoundPlayed, isBrickActive, hasABomb, ghostBrick, ghostBrickTimer);
             }
         }
         else if (!gameStart)
@@ -202,6 +254,7 @@ int main()
         }
         else
         {
+            
             // Update variables for the collision between the Ball and the Paddle
             ball_bottomMiddle.x = ball.x + ball.width / 2;
             movingPaddle_x = paddle.x;
@@ -252,7 +305,7 @@ int main()
                     if (ghostBrick[line][col])
                     {
                         // If the ghost brick is active, then draw and show the Ghost Brick for a short time
-                        DrawRectangleRec(bricks[line][col], GRAY);
+                        DrawRectangleRec(bricks[line][col], RED);
 
                         // Decrement the Ghost Brick timer
                         ghostBrickTimer[line][col]--;
@@ -372,7 +425,7 @@ int main()
                
                 /*
                 * Here I'm dividing the top surface of the Paddle into 6 separate parts. 
-                * The ball direction will be different, depending on which part od the Paddle 
+                * The ball direction will be different, depending on which part of the Paddle 
                 * will contact with the bottom middle of the ball.
                 * This simple solution adds some simple player control mechanics, 
                 * so that they can try to direct the ball to the brick or bricks of their choice.
@@ -386,13 +439,13 @@ int main()
                 }
                 else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 6 && ball_bottomMiddle.x < movingPaddle_x + paddle.width / 6 * 2)
                 {
-                    // The Ball bounces and goes slightly to the left
+                    // The Ball bounces and goes to the left
                     ball_direction_x = -3;
                     ball_direction_y = -5;
                 }
                 else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 6 * 2 && ball_bottomMiddle.x < movingPaddle_x + paddle.width / 6 * 3)
                 {
-                    // The Ball bounces and goes straight up (actually it's tiny bit right to avoid a weird issue with the brick collision)
+                    // The Ball bounces and goes slightly to the left
                     ball_direction_x = -1;
                     ball_direction_y = -5;
                 }
@@ -404,7 +457,7 @@ int main()
                 }
                 else if (ball_bottomMiddle.x >= movingPaddle_x + paddle.width / 6 * 4 && ball_bottomMiddle.x < movingPaddle_x + paddle.width / 6 * 5)
                 {
-                    // The Ball bounces and goes far to the right
+                    // The Ball bounces and goes to the right
                     ball_direction_x = 3;
                     ball_direction_y = -5;
                 }
