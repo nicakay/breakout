@@ -1,7 +1,7 @@
 ### Breakout
 ### An old-school Breakout / Arkanoid game creasted in C++ and Raylib
 
-![](https://github.com/nicakay/breakout/blob/main/gifs/bomb_suicide.gif)
+![](https://github.com/nicakay/breakout/blob/main/gifs/breakout_final.gif)
 
 # Main features
 
