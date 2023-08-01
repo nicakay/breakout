@@ -3,43 +3,45 @@
 
 // Function that Restarts the game if the player wants to start over on the Game Over or Death screen
 void RestartGame(Rectangle &topWall, Rectangle &ball, int &ball_direction_x, int &ball_direction_y,
-               Rectangle &paddle, int &score, bool &gameStart, bool &playerDied, bool &gameOverSoundPlayed,
+               Rectangle &paddle, int &score, int numLines, int numCols, int &remainingBricks, bool &gameStart, bool &playerDied, bool &gameOverSoundPlayed, bool &applauseSoundPlayed,
                bool (&isBrickActive)[8][13], bool (&hasABomb)[8][13], bool (&ghostBrick)[8][13], int (&ghostBrickTimer)[8][13])
-{
-    // Reset the game variables and states
-    score = 0;
-    gameStart = false;
-    playerDied = false;
-    gameOverSoundPlayed = false;
-
-    // Reset Ball position and direction
-    ball.x = 350;
-    ball.y = 320;
-    ball_direction_x = 3;
-    ball_direction_y = 4;
-
-    // Reset Paddle position
-    paddle.x = topWall.height + 215;
-
-    // Reset Bricks
-    for (int line = 0; line < 8; line++) 
     {
-        for (int col = 0; col < 13; col++) 
+        // Reset the game variables and states
+        score = 0;
+        gameStart = false;
+        playerDied = false;
+        gameOverSoundPlayed = false;
+        applauseSoundPlayed = false;
+        remainingBricks = numLines * numCols;
+
+        // Reset Ball position and direction
+        ball.x = 350;
+        ball.y = 320;
+        ball_direction_x = 3;
+        ball_direction_y = 4;
+
+        // Reset Paddle position
+        paddle.x = topWall.height + 215;
+
+        // Reset Bricks
+        for (int line = 0; line < numLines; line++) 
         {
-            isBrickActive[line][col] = true;
-            hasABomb[line][col] = false; // Clear all the Bombs
-            ghostBrick[line][col] = false;
-            ghostBrickTimer[line][col] = 0;
+            for (int col = 0; col < numCols; col++) 
+            {
+                isBrickActive[line][col] = true;
+                hasABomb[line][col] = false; // Clear all the Bombs
+                ghostBrick[line][col] = false;
+                ghostBrickTimer[line][col] = 0;
+            }
+        }
+
+        // Replant new set of Bombs
+        for (int rowNum = 0; rowNum < numLines; rowNum++) 
+        {
+            int colNum = rand() % numCols;
+            hasABomb[rowNum][colNum] = true;
         }
     }
-
-    // Replant new set of Bombs
-    for (int rowNum = 0; rowNum < 8; rowNum++) 
-    {
-        int colNum = rand() % 13;
-        hasABomb[rowNum][colNum] = true;
-    }
-}
 
 int main()
 {
@@ -53,10 +55,13 @@ int main()
     Wave paddleHitWav = LoadWave("sounds/paddle_hit.wav");
     Wave gameOverWav = LoadWave("sounds/game_over.wav");
     Wave brickBreakWav = LoadWave("sounds/brick_break.wav");
+    Wave applauseWav = LoadWave("sounds/applause.wav");
     Sound paddleHit = LoadSoundFromWave(paddleHitWav);
     Sound gameOver = LoadSoundFromWave(gameOverWav);
     Sound brickBreak = LoadSoundFromWave(brickBreakWav);
+    Sound applause = LoadSoundFromWave(applauseWav);
     bool gameOverSoundPlayed = false; // To avoid the sound loop
+    bool applauseSoundPlayed = false;
 
     // --- TEXT BAR ---
     const int lettersSpacing{25};
@@ -145,6 +150,10 @@ int main()
     int ghostBrickTimer[numLines][numCols];
     // Determines how long each Ghost Brick will be displayed (in frames)
     int ghostBrickTime{3};
+
+    // Will keep tracking the remaining bricks to check if the was Victory in order to display the Victory game over screen
+    int remainingBricks{numLines * numCols};
+    bool victory = false;
     
     for (int line = 0; line < numLines; line++) 
     {
@@ -221,7 +230,7 @@ int main()
 
             if (IsKeyPressed(KEY_SPACE) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN))
             {
-                RestartGame(topWall, ball, ball_direction_x, ball_direction_y, paddle, score, gameStart, playerDied, gameOverSoundPlayed, isBrickActive, hasABomb, ghostBrick, ghostBrickTimer);
+                RestartGame(topWall, ball, ball_direction_x, ball_direction_y, paddle, score, numLines, numCols, remainingBricks, gameStart, playerDied, gameOverSoundPlayed, applauseSoundPlayed, isBrickActive, hasABomb, ghostBrick, ghostBrickTimer);
             }
         }
         else if (playerDied)
@@ -233,14 +242,14 @@ int main()
             // If statement to avoid the game-over sound being looped by the main While loop
             if (!gameOverSoundPlayed)
             {
-                // Play sound effect on Game Over
+                // Play sound effect on Death (same as Game Over)
                 PlaySound(gameOver);
                 gameOverSoundPlayed = true;
             }
 
             if (IsKeyPressed(KEY_SPACE) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN))
             {
-                RestartGame(topWall, ball, ball_direction_x, ball_direction_y, paddle, score, gameStart, playerDied, gameOverSoundPlayed, isBrickActive, hasABomb, ghostBrick, ghostBrickTimer);
+                RestartGame(topWall, ball, ball_direction_x, ball_direction_y, paddle, score, numLines, numCols, remainingBricks, gameStart, playerDied, gameOverSoundPlayed, applauseSoundPlayed, isBrickActive, hasABomb, ghostBrick, ghostBrickTimer);
             }
         }
         else if (!gameStart)
@@ -250,6 +259,26 @@ int main()
             if (IsKeyPressed(KEY_SPACE) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN))
             {
                 gameStart = true;
+            }
+        }
+        else if (victory)
+        {
+            DrawText("Victory!", 375, 240, 50, GREEN);
+            DrawText(TextFormat("Your score: %i", score), 348, 320, 40, YELLOW);
+            DrawText("(Press Space, X or A to Try Again)", 250, 420, 28, BLUE);
+
+            // If statement to avoid the game-over sound being looped by the main While loop
+            if (!applauseSoundPlayed)
+            {
+                // Play sound effect on Victory
+                PlaySound(applause);
+                applauseSoundPlayed = true;
+            }
+
+            if (IsKeyPressed(KEY_SPACE) || IsGamepadButtonPressed(0, GAMEPAD_BUTTON_RIGHT_FACE_DOWN))
+            {
+                victory = false;
+                RestartGame(topWall, ball, ball_direction_x, ball_direction_y, paddle, score, numLines, numCols, remainingBricks, gameStart, playerDied, gameOverSoundPlayed, applauseSoundPlayed, isBrickActive, hasABomb, ghostBrick, ghostBrickTimer);
             }
         }
         else
@@ -361,6 +390,9 @@ int main()
 
                         // Deactivate the Brick after the hit
                         isBrickActive[line][col] = false;
+
+                        // Decrement the remaining Bricks
+                        remainingBricks--;
 
                         // Activate the Ghost Brick
                         ghostBrick[line][col] = true;
@@ -492,6 +524,9 @@ int main()
                         // Deactivate the Brick after the hit
                         isBrickActive[line][col] = false;
 
+                        // Decrement the remaining Bricks
+                        remainingBricks--;
+
                         // Activate the Ghost Brick
                         ghostBrick[line][col] = true;
 
@@ -563,6 +598,12 @@ int main()
                 }
             }
 
+            // Check if the player beat the game
+            if (remainingBricks == 0)
+            {
+                victory = true;
+            }
+
         }   
 
         EndDrawing();
@@ -570,9 +611,11 @@ int main()
     UnloadSound(paddleHit);
     UnloadSound(gameOver);
     UnloadSound(brickBreak);
+    UnloadSound(applause);
     UnloadWave(paddleHitWav);
     UnloadWave(gameOverWav);
     UnloadWave(brickBreakWav);
+    UnloadWave(applauseWav);
     CloseAudioDevice();
     CloseWindow();
 
